@@ -1,0 +1,172 @@
+// PostAgentPro Database Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  passwordHash      String    @map("password_hash")
+  stripeCustomerId  String?   @unique @map("stripe_customer_id")
+  planTier          String    @default("starter") @map("plan_tier")
+  status            String    @default("active")
+  trialEndsAt       DateTime? @map("trial_ends_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  business          Business?
+  connectedAccounts ConnectedAccount[]
+  mediaLibrary      MediaLibrary[]
+  postQueue         PostQueue[]
+  userPreferences   UserPreferences?
+
+  @@map("users")
+}
+
+model Business {
+  id          String   @id @default(uuid())
+  userId      String   @unique @map("user_id")
+  name        String
+  type        String
+  locationCity String? @map("location_city")
+  locationState String? @map("location_state")
+  description String?
+  website     String?
+  logoUrl     String?  @map("logo_url")
+  brandVoice  String   @default("professional") @map("brand_voice")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("businesses")
+}
+
+model ConnectedAccount {
+  id                  String    @id @default(uuid())
+  userId              String    @map("user_id")
+  platform            String
+  accountId           String    @map("account_id")
+  accountName         String?   @map("account_name")
+  accessTokenEncrypted String   @map("access_token_encrypted")
+  refreshTokenEncrypted String? @map("refresh_token_encrypted")
+  tokenExpiresAt      DateTime? @map("token_expires_at")
+  status              String    @default("active")
+  connectedAt         DateTime  @default(now()) @map("connected_at")
+  lastRefreshedAt     DateTime? @map("last_refreshed_at")
+
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postQueue           PostQueue[]
+
+  @@unique([userId, platform, accountId])
+  @@map("connected_accounts")
+}
+
+model MediaLibrary {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  filename    String
+  url         String
+  sizeBytes   Int?     @map("size_bytes")
+  mimeType    String?  @map("mime_type")
+  source      String   @default("upload")
+  uploadedAt  DateTime @default(now()) @map("uploaded_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("media_library")
+}
+
+model PostQueue {
+  id                String    @id @default(uuid())
+  userId            String    @map("user_id")
+  accountId         String    @map("account_id")
+  platform          String
+  content           String
+  mediaUrl          String?   @map("media_url")
+  hashtags          String[]
+  scheduledFor      DateTime  @map("scheduled_for")
+  status            String    @default("pending")
+  platformPostId    String?   @map("platform_post_id")
+  publishedAt       DateTime? @map("published_at")
+  errorMessage      String?   @map("error_message")
+  retryCount        Int       @default(0) @map("retry_count")
+  requiresApproval  Boolean   @default(false) @map("requires_approval")
+  approvedAt        DateTime? @map("approved_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account           ConnectedAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  analytics         Analytics[]
+
+  @@map("post_queue")
+}
+
+model Analytics {
+  id              String   @id @default(uuid())
+  postId          String   @map("post_id")
+  platform        String
+  reach           Int      @default(0)
+  impressions     Int      @default(0)
+  clicks          Int      @default(0)
+  likes           Int      @default(0)
+  comments        Int      @default(0)
+  shares          Int      @default(0)
+  engagementRate  Decimal? @map("engagement_rate") @db.Decimal(5, 2)
+  fetchedAt       DateTime @default(now()) @map("fetched_at")
+
+  post            PostQueue @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("analytics")
+}
+
+model ContentTemplate {
+  id            String   @id @default(uuid())
+  businessType  String   @map("business_type")
+  theme         String
+  templateText  String   @map("template_text")
+  platform      String?
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("content_templates")
+}
+
+model UserPreferences {
+  id                    String   @id @default(uuid())
+  userId                String   @unique @map("user_id")
+  postingFrequency      Int      @default(3) @map("posting_frequency")
+  preferredTimes        String[] @map("preferred_times")
+  timezone              String   @default("America/New_York")
+  themesEnabled         String[] @default(["tip", "promotion", "seasonal"]) @map("themes_enabled")
+  avoidKeywords         String[] @default([]) @map("avoid_keywords")
+  emailWeeklySummary    Boolean  @default(true) @map("email_weekly_summary")
+  emailMonthlyReport    Boolean  @default(true) @map("email_monthly_report")
+  pushApprovalNeeded    Boolean  @default(true) @map("push_approval_needed")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model StockPhotoCache {
+  id              String   @id @default(uuid())
+  businessType    String   @map("business_type")
+  searchQuery     String   @map("search_query")
+  photoUrl        String   @map("photo_url")
+  photographerName String? @map("photographer_name")
+  photographerUrl  String? @map("photographer_url")
+  source          String
+  cachedAt        DateTime @default(now()) @map("cached_at")
+
+  @@unique([businessType, photoUrl])
+  @@map("stock_photo_cache")
+}
