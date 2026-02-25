@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 
+export const dynamic = 'force-dynamic';
+
 const BUSINESS_TYPES = [
   'Plumber',
   'Electrician',
