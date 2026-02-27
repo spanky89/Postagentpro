@@ -1,20 +1,19 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import authRoutes from './routes/auth.js';
-import healthRoutes from './routes/health.js';
-import businessRoutes from './routes/business.js';
-import connectionsRoutes from './routes/connections.js';
-import postsRoutes from './routes/posts.js';
-import { startPublishingJob } from './jobs/publishingJob.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+console.log(`Starting server on port ${PORT}...`);
+console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
+console.log(`FRONTEND_URL: ${process.env.FRONTEND_URL}`);
+
 // Test endpoint before middleware
 app.get('/', (req, res) => {
+  console.log('Root endpoint hit');
   res.send('PostAgentPro API is running');
 });
 
@@ -25,12 +24,47 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Routes
-app.use('/api/health', healthRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/business', businessRoutes);
-app.use('/api/connections', connectionsRoutes);
-app.use('/api/posts', postsRoutes);
+// Import routes after app is created
+let authRoutes, healthRoutes, businessRoutes, connectionsRoutes, postsRoutes, startPublishingJob;
+
+(async () => {
+  try {
+    console.log('Loading routes...');
+    const modules = await Promise.all([
+      import('./routes/auth.js'),
+      import('./routes/health.js'),
+      import('./routes/business.js'),
+      import('./routes/connections.js'),
+      import('./routes/posts.js'),
+      import('./jobs/publishingJob.js')
+    ]);
+    
+    [authRoutes, healthRoutes, businessRoutes, connectionsRoutes, postsRoutes, { startPublishingJob }] = modules.map(m => m.default || m);
+    
+    console.log('Routes loaded, mounting...');
+    
+    // Routes
+    app.use('/api/health', healthRoutes);
+    app.use('/api/auth', authRoutes);
+    app.use('/api/business', businessRoutes);
+    app.use('/api/connections', connectionsRoutes);
+    app.use('/api/posts', postsRoutes);
+    
+    console.log('Routes mounted');
+    
+    // Start background job
+    if (startPublishingJob) {
+      try {
+        startPublishingJob();
+        console.log('⏰ Publishing job started');
+      } catch (error) {
+        console.error('⚠️ Failed to start publishing job:', error.message);
+      }
+    }
+  } catch (error) {
+    console.error('Error loading routes:', error);
+  }
+})();
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -40,17 +74,20 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 PostAgentPro API running on http://0.0.0.0:${PORT}`);
+// Start server IMMEDIATELY, before routes finish loading
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 PostAgentPro API listening on 0.0.0.0:${PORT}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
-  
-  // Start background publishing job with error handling
-  try {
-    startPublishingJob();
-    console.log('⏰ Publishing job started');
-  } catch (error) {
-    console.error('⚠️ Failed to start publishing job:', error.message);
-    console.log('Server will continue without background jobs');
-  }
+});
+
+server.on('error', (error) => {
+  console.error('Server error:', error);
+});
+
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, closing server...');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });
