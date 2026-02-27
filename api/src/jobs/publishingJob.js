@@ -15,8 +15,10 @@ export function startPublishingJob() {
 
   console.log('[Job] Starting publishing job (runs every 1 minute)');
 
-  // Run immediately on start
-  runPublishingCycle();
+  // Run immediately on start (don't await to avoid blocking server startup)
+  runPublishingCycle().catch(err => {
+    console.error('[Job] Error in initial publishing cycle:', err.message);
+  });
 
   // Then run every minute
   jobInterval = setInterval(async () => {

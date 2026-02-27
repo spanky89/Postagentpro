@@ -45,7 +45,12 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 PostAgentPro API running on http://0.0.0.0:${PORT}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
   
-  // Start background publishing job
-  startPublishingJob();
-  console.log('⏰ Publishing job started');
+  // Start background publishing job with error handling
+  try {
+    startPublishingJob();
+    console.log('⏰ Publishing job started');
+  } catch (error) {
+    console.error('⚠️ Failed to start publishing job:', error.message);
+    console.log('Server will continue without background jobs');
+  }
 });
