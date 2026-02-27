@@ -13,6 +13,11 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// Test endpoint before middleware
+app.get('/', (req, res) => {
+  res.send('PostAgentPro API is running');
+});
+
 // Middleware
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
