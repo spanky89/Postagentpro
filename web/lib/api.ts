@@ -192,8 +192,16 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to complete Google auth');
+      // Try to parse as JSON, fall back to text if it fails
+      const contentType = response.headers.get('content-type');
+      if (contentType?.includes('application/json')) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to complete Google auth');
+      } else {
+        const text = await response.text();
+        console.error('Non-JSON error response:', text);
+        throw new Error(`Failed to complete Google auth: ${response.status} ${response.statusText}`);
+      }
     }
 
     return response.json();

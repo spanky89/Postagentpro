@@ -58,15 +58,26 @@ router.post('/google/initiate', requireAuth, async (req, res, next) => {
 // POST /api/connections/google/callback - Handle Google OAuth callback
 router.post('/google/callback', requireAuth, async (req, res, next) => {
   try {
+    console.log('[Google Callback] Request received');
+    console.log('[Google Callback] User:', req.user?.userId);
+    console.log('[Google Callback] Code length:', req.body?.code?.length);
+    
     const { code } = req.body;
     
     if (!code) {
+      console.log('[Google Callback] ERROR: No code provided');
       return res.status(400).json({ error: 'Authorization code required' });
     }
 
     const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, FRONTEND_URL } = process.env;
+    console.log('[Google Callback] Config:', { 
+      hasClientId: !!GOOGLE_CLIENT_ID, 
+      hasSecret: !!GOOGLE_CLIENT_SECRET,
+      frontendUrl: FRONTEND_URL 
+    });
     
     // Exchange code for tokens
+    console.log('[Google Callback] Exchanging code for tokens...');
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -79,12 +90,16 @@ router.post('/google/callback', requireAuth, async (req, res, next) => {
       })
     });
 
+    console.log('[Google Callback] Token response status:', tokenResponse.status);
+
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.json();
+      console.log('[Google Callback] Token exchange failed:', errorData);
       throw new Error(errorData.error_description || 'Failed to exchange authorization code');
     }
 
     const tokens = await tokenResponse.json();
+    console.log('[Google Callback] Tokens received, has access_token:', !!tokens.access_token);
 
     // Get user info from Google (email as accountId fallback)
     const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
@@ -98,6 +113,7 @@ router.post('/google/callback', requireAuth, async (req, res, next) => {
     const accountName = userInfo.email || 'Google Account';
 
     // Save to database (using schema field names)
+    console.log('[Google Callback] Saving to database...', { userId: req.user.userId, accountId: googleAccountId, accountName });
     const connection = await prisma.connectedAccount.create({
       data: {
         userId: req.user.userId,
@@ -111,6 +127,7 @@ router.post('/google/callback', requireAuth, async (req, res, next) => {
       }
     });
 
+    console.log('[Google Callback] SUCCESS - Connection saved:', connection.id);
     res.json({ 
       success: true,
       connection: {
@@ -120,6 +137,8 @@ router.post('/google/callback', requireAuth, async (req, res, next) => {
       }
     });
   } catch (error) {
+    console.error('[Google Callback] ERROR:', error.message);
+    console.error('[Google Callback] Stack:', error.stack);
     next(error);
   }
 });
