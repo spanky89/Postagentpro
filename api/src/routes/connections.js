@@ -129,7 +129,7 @@ router.post('/google/callback', requireAuth, async (req, res, next) => {
         accessTokenEncrypted: tokens.access_token, // TODO: Encrypt in production
         refreshTokenEncrypted: tokens.refresh_token || '',
         tokenExpiresAt: new Date(Date.now() + (tokens.expires_in * 1000)),
-        status: 'active'
+        status: 'ACTIVE'
       }
     });
 
@@ -227,7 +227,7 @@ router.post('/facebook/callback', requireAuth, async (req, res, next) => {
         accountName: pageName,
         accessTokenEncrypted: tokens.access_token, // TODO: Encrypt in production
         refreshTokenEncrypted: '',
-        status: 'active'
+        status: 'ACTIVE'
       }
     });
 
