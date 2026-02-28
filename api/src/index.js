@@ -11,18 +11,27 @@ console.log(`Starting server on port ${PORT}...`);
 console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
 console.log(`FRONTEND_URL: ${process.env.FRONTEND_URL}`);
 
-// Test endpoint before middleware
+// CORS configuration - must come BEFORE routes
+const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:3000';
+console.log(`CORS allowed origin: ${allowedOrigin}`);
+
+app.use(cors({
+  origin: allowedOrigin,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Handle preflight for all routes
+app.options('*', cors());
+
+app.use(express.json());
+
+// Test endpoint
 app.get('/', (req, res) => {
   console.log('Root endpoint hit');
   res.send('PostAgentPro API is running');
 });
-
-// Middleware
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true
-}));
-app.use(express.json());
 
 // Import routes after app is created
 let authRoutes, healthRoutes, businessRoutes, connectionsRoutes, postsRoutes, startPublishingJob;
