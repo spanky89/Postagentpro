@@ -80,31 +80,34 @@ router.post('/google/callback', requireAuth, async (req, res, next) => {
     });
 
     if (!tokenResponse.ok) {
-      throw new Error('Failed to exchange authorization code');
+      const errorData = await tokenResponse.json();
+      throw new Error(errorData.error_description || 'Failed to exchange authorization code');
     }
 
     const tokens = await tokenResponse.json();
 
-    // Fetch account info
-    const profileResponse = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {
+    // Get user info from Google (email as accountId fallback)
+    const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: {
         'Authorization': `Bearer ${tokens.access_token}`
       }
     });
 
-    const profile = await profileResponse.json();
-    const accountName = profile.accounts?.[0]?.accountName || 'Google Business Profile';
+    const userInfo = await userInfoResponse.json();
+    const googleAccountId = userInfo.id || userInfo.email;
+    const accountName = userInfo.email || 'Google Account';
 
-    // Save to database
+    // Save to database (using schema field names)
     const connection = await prisma.connectedAccount.create({
       data: {
         userId: req.user.userId,
         platform: 'GOOGLE',
+        accountId: googleAccountId,
         accountName,
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
-        tokenExpiry: new Date(Date.now() + tokens.expires_in * 1000),
-        status: 'ACTIVE'
+        accessTokenEncrypted: tokens.access_token, // TODO: Encrypt in production
+        refreshTokenEncrypted: tokens.refresh_token || '',
+        tokenExpiresAt: new Date(Date.now() + (tokens.expires_in * 1000)),
+        status: 'active'
       }
     });
 
@@ -169,27 +172,37 @@ router.post('/facebook/callback', requireAuth, async (req, res, next) => {
     const tokenResponse = await fetch(tokenUrl);
     
     if (!tokenResponse.ok) {
-      throw new Error('Failed to exchange authorization code');
+      const errorData = await tokenResponse.json();
+      throw new Error(errorData.error?.message || 'Failed to exchange authorization code');
     }
 
     const tokens = await tokenResponse.json();
 
+    // Get user info for accountId
+    const userResponse = await fetch(
+      `https://graph.facebook.com/v18.0/me?access_token=${tokens.access_token}`
+    );
+    const user = await userResponse.json();
+    
     // Get user's pages
     const pagesResponse = await fetch(
       `https://graph.facebook.com/v18.0/me/accounts?access_token=${tokens.access_token}`
     );
     const pages = await pagesResponse.json();
     
-    const pageName = pages.data?.[0]?.name || 'Facebook Page';
+    const pageId = pages.data?.[0]?.id || user.id;
+    const pageName = pages.data?.[0]?.name || user.name || 'Facebook Account';
 
-    // Save to database
+    // Save to database (using schema field names)
     const connection = await prisma.connectedAccount.create({
       data: {
         userId: req.user.userId,
         platform: 'FACEBOOK',
+        accountId: pageId,
         accountName: pageName,
-        accessToken: tokens.access_token,
-        status: 'ACTIVE'
+        accessTokenEncrypted: tokens.access_token, // TODO: Encrypt in production
+        refreshTokenEncrypted: '',
+        status: 'active'
       }
     });
 
