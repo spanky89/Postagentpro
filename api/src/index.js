@@ -12,11 +12,15 @@ console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
 console.log(`FRONTEND_URL: ${process.env.FRONTEND_URL}`);
 
 // CORS configuration - must come BEFORE routes
-const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:3000';
-console.log(`CORS allowed origin: ${allowedOrigin}`);
+const allowedOrigins = [
+  'https://postagentpro.com',
+  'https://www.postagentpro.com',
+  'http://localhost:3000'
+];
+console.log(`CORS allowed origins: ${allowedOrigins.join(', ')}`);
 
 app.use(cors({
-  origin: allowedOrigin,
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
