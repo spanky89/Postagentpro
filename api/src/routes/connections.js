@@ -102,15 +102,20 @@ router.post('/google/callback', requireAuth, async (req, res, next) => {
     console.log('[Google Callback] Tokens received, has access_token:', !!tokens.access_token);
 
     // Get user info from Google (email as accountId fallback)
+    console.log('[Google Callback] Fetching user info from Google...');
     const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: {
         'Authorization': `Bearer ${tokens.access_token}`
       }
     });
 
+    console.log('[Google Callback] User info response status:', userInfoResponse.status);
     const userInfo = await userInfoResponse.json();
+    console.log('[Google Callback] User info received:', JSON.stringify(userInfo));
+    
     const googleAccountId = userInfo.id || userInfo.email;
     const accountName = userInfo.email || 'Google Account';
+    console.log('[Google Callback] Extracted accountId:', googleAccountId, 'name:', accountName);
 
     // Save to database (using schema field names)
     console.log('[Google Callback] Saving to database...', { userId: req.user.userId, accountId: googleAccountId, accountName });
