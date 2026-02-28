@@ -37,7 +37,8 @@ router.post('/google/initiate', requireAuth, async (req, res, next) => {
 
     // Generate OAuth URL
     const redirectUri = `${FRONTEND_URL}/auth/google/callback`;
-    const scope = 'https://www.googleapis.com/auth/business.manage';
+    // Request basic profile info (email, profile) for account identification
+    const scope = 'email profile openid';
     const state = req.user.userId; // Pass user ID in state for security
     
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
