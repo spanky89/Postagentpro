@@ -21,7 +21,9 @@ export default function SignupPage() {
 
     try {
       await api.signup({ email, password });
-      router.push('/dashboard');
+      // Clear onboarding flag for new users
+      localStorage.removeItem('onboarding_complete');
+      router.push('/onboarding');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Signup failed');
     } finally {

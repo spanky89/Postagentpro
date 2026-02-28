@@ -4,23 +4,14 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 
-export const dynamic = 'force-dynamic';
-
-export default function DashboardPage() {
+export default function OnboardingRedirect() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to new simplified home page
     if (!api.isAuthenticated()) {
       router.push('/login');
     } else {
-      // Check if onboarding is complete
-      const onboardingComplete = localStorage.getItem('onboarding_complete');
-      if (onboardingComplete === 'true') {
-        router.push('/dashboard/home');
-      } else {
-        router.push('/onboarding');
-      }
+      router.push('/onboarding/step1');
     }
   }, [router]);
 
