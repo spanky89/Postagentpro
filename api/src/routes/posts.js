@@ -1,11 +1,10 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { generateCompletePost } from '../services/postGenerator.js';
 import { getStockImage, getImageOptions } from '../services/imageService.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // GET /api/posts - Get user's post queue
 router.get('/', requireAuth, async (req, res, next) => {

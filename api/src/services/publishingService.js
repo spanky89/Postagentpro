@@ -1,8 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/db.js';
 import { publishToGoogle, refreshGoogleToken, needsTokenRefresh } from './publishers/googlePublisher.js';
 import { publishToFacebook } from './publishers/facebookPublisher.js';
-
-const prisma = new PrismaClient();
 
 /**
  * Process due posts and publish them
