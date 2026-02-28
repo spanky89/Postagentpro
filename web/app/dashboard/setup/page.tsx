@@ -59,9 +59,16 @@ export default function SetupPage() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    let value = e.target.value;
+    
+    // Normalize website URL - prepend https:// if missing
+    if (e.target.name === 'website' && value && !value.match(/^https?:\/\//i)) {
+      value = 'https://' + value;
+    }
+    
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: value
     });
   };
 
@@ -183,12 +190,13 @@ export default function SetupPage() {
             <input
               id="website"
               name="website"
-              type="url"
+              type="text"
               value={formData.website}
               onChange={handleChange}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="https://yourwebsite.com"
+              placeholder="yourwebsite.com"
             />
+            <p className="text-sm text-gray-500 mt-1">We'll automatically add https:// if needed</p>
           </div>
 
           <div className="flex gap-4 pt-4">
