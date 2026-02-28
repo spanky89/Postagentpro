@@ -14,7 +14,7 @@ router.get('/', requireAuth, async (req, res, next) => {
         platform: true,
         accountName: true,
         status: true,
-        createdAt: true
+        connectedAt: true
       }
     });
     
