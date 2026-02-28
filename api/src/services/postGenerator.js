@@ -5,9 +5,9 @@ const openai = new OpenAI({
 });
 
 /**
- * Generate post content based on business info
+ * Generate post content based on business info and optional photo
  */
-export async function generatePostContent(business, postType = 'general') {
+export async function generatePostContent(business, postType = 'general', photoDescription = null) {
   try {
     const { name, type, locationCity, locationState, description } = business;
 
@@ -20,6 +20,7 @@ Create posts that:
 - Are 80-150 words (Facebook/Google optimal length)
 - Focus on value to customers (not "we're the best")
 - Match the local, service-based business vibe
+${photoDescription ? `- Reference the work shown in the photo naturally` : ''}
 
 Business context:
 - Name: ${name}
@@ -27,7 +28,9 @@ Business context:
 - Location: ${locationCity}, ${locationState}
 ${description ? `- About: ${description}` : ''}`;
 
-    const userPrompt = getPromptForPostType(type, postType, locationCity, locationState);
+    const userPrompt = photoDescription 
+      ? `Write a post about this ${type.toLowerCase()} project: ${photoDescription}. Make it about the work shown, why it matters, and encourage customers to reach out.`
+      : getPromptForPostType(type, postType, locationCity, locationState);
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -115,16 +118,17 @@ export function generateHashtags(business, postContent) {
 }
 
 /**
- * Generate a complete post with content + hashtags
+ * Generate a complete post with content + hashtags + optional media
  */
-export async function generateCompletePost(business, postType = 'general') {
-  const { content, tokensUsed } = await generatePostContent(business, postType);
+export async function generateCompletePost(business, postType = 'general', mediaUrl = null, photoDescription = null) {
+  const { content, tokensUsed } = await generatePostContent(business, postType, photoDescription);
   const hashtags = generateHashtags(business, content);
   
   return {
     content: `${content}\n\n${hashtags}`,
     rawContent: content,
     hashtags,
+    mediaUrl, // User-uploaded photo URL
     postType,
     tokensUsed
   };

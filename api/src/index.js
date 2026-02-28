@@ -37,8 +37,11 @@ app.get('/', (req, res) => {
   res.send('PostAgentPro API is running');
 });
 
+// Serve uploaded files statically
+app.use('/uploads', express.static('uploads'));
+
 // Import routes after app is created
-let authRoutes, healthRoutes, businessRoutes, connectionsRoutes, postsRoutes, startPublishingJob;
+let authRoutes, healthRoutes, businessRoutes, connectionsRoutes, postsRoutes, mediaRoutes, startPublishingJob;
 
 (async () => {
   try {
@@ -49,10 +52,11 @@ let authRoutes, healthRoutes, businessRoutes, connectionsRoutes, postsRoutes, st
       import('./routes/business.js'),
       import('./routes/connections.js'),
       import('./routes/posts.js'),
+      import('./routes/media.js'),
       import('./jobs/publishingJob.js')
     ]);
     
-    [authRoutes, healthRoutes, businessRoutes, connectionsRoutes, postsRoutes, { startPublishingJob }] = modules.map(m => m.default || m);
+    [authRoutes, healthRoutes, businessRoutes, connectionsRoutes, postsRoutes, mediaRoutes, { startPublishingJob }] = modules.map(m => m.default || m);
     
     console.log('Routes loaded, mounting...');
     
@@ -62,6 +66,7 @@ let authRoutes, healthRoutes, businessRoutes, connectionsRoutes, postsRoutes, st
     app.use('/api/business', businessRoutes);
     app.use('/api/connections', connectionsRoutes);
     app.use('/api/posts', postsRoutes);
+    app.use('/api/media', mediaRoutes);
     
     console.log('Routes mounted');
     

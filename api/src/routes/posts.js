@@ -2,7 +2,6 @@ import express from 'express';
 import { prisma } from '../lib/db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { generateCompletePost } from '../services/postGenerator.js';
-import { getStockImage, getImageOptions } from '../services/imageService.js';
 
 const router = express.Router();
 
@@ -39,10 +38,10 @@ router.get('/', requireAuth, async (req, res, next) => {
   }
 });
 
-// POST /api/posts/generate - Generate a new post
+// POST /api/posts/generate - Generate a new post (optionally with photo)
 router.post('/generate', requireAuth, async (req, res, next) => {
   try {
-    const { postType = 'general', includeImage = true } = req.body;
+    const { postType = 'general', photoId = null } = req.body;
     
     // Get user's business profile
     const business = await prisma.business.findUnique({
@@ -55,23 +54,34 @@ router.post('/generate', requireAuth, async (req, res, next) => {
       });
     }
     
-    // Generate post content
-    const postData = await generateCompletePost(business, postType);
-    
-    // Get stock image if requested
-    let imageData = null;
-    if (includeImage) {
-      imageData = await getStockImage(business.type);
+    // Get photo from media library if provided
+    let mediaUrl = null;
+    let photoDescription = null;
+    if (photoId) {
+      const photo = await prisma.mediaLibrary.findFirst({
+        where: {
+          id: photoId,
+          userId: req.user.userId
+        }
+      });
+      
+      if (photo) {
+        mediaUrl = photo.url;
+        photoDescription = `a completed ${business.type.toLowerCase()} project`;
+      }
     }
+    
+    // Generate post content
+    const postData = await generateCompletePost(business, postType, mediaUrl, photoDescription);
     
     // Calculate next available schedule slot
     const scheduledFor = await getNextScheduleSlot(req.user.userId);
     
-    // Get first connected account (we'll improve this later for multi-platform)
+    // Get first connected account
     const connection = await prisma.connectedAccount.findFirst({
       where: {
         userId: req.user.userId,
-        status: 'ACTIVE'
+        status: 'active'
       }
     });
 
@@ -90,7 +100,7 @@ router.post('/generate', requireAuth, async (req, res, next) => {
         content: postData.content,
         hashtags: postData.hashtags ? [postData.hashtags] : [],
         scheduledFor,
-        mediaUrl: imageData?.url,
+        mediaUrl,
         status: 'pending'
       }
     });
@@ -101,13 +111,17 @@ router.post('/generate', requireAuth, async (req, res, next) => {
   }
 });
 
-// POST /api/posts/bulk-generate - Generate multiple posts at once
+// POST /api/posts/bulk-generate - Generate posts from uploaded photos
 router.post('/bulk-generate', requireAuth, async (req, res, next) => {
   try {
-    const { count = 7, postTypes = ['general'] } = req.body;
+    const { photoIds } = req.body; // Array of media library photo IDs
     
-    if (count > 30) {
-      return res.status(400).json({ error: 'Maximum 30 posts per bulk generation' });
+    if (!photoIds || photoIds.length === 0) {
+      return res.status(400).json({ error: 'Please upload photos first' });
+    }
+    
+    if (photoIds.length > 50) {
+      return res.status(400).json({ error: 'Maximum 50 photos per batch' });
     }
     
     // Get user's business profile
@@ -125,7 +139,7 @@ router.post('/bulk-generate', requireAuth, async (req, res, next) => {
     const connection = await prisma.connectedAccount.findFirst({
       where: {
         userId: req.user.userId,
-        status: 'ACTIVE'
+        status: 'active'
       }
     });
 
@@ -134,17 +148,28 @@ router.post('/bulk-generate', requireAuth, async (req, res, next) => {
         error: 'Please connect a social media account first'
       });
     }
+    
+    // Get the photos from media library
+    const photos = await prisma.mediaLibrary.findMany({
+      where: {
+        id: { in: photoIds },
+        userId: req.user.userId
+      }
+    });
+    
+    if (photos.length === 0) {
+      return res.status(400).json({ error: 'No valid photos found' });
+    }
 
     const posts = [];
     let scheduledFor = await getNextScheduleSlot(req.user.userId);
     
-    for (let i = 0; i < count; i++) {
-      // Rotate through post types
-      const postType = postTypes[i % postTypes.length];
+    for (let i = 0; i < photos.length; i++) {
+      const photo = photos[i];
       
-      // Generate content
-      const postData = await generateCompletePost(business, postType);
-      const imageData = await getStockImage(business.type);
+      // Generate content with photo context
+      const photoDescription = `a completed ${business.type.toLowerCase()} project`;
+      const postData = await generateCompletePost(business, 'general', photo.url, photoDescription);
       
       // Create post
       const post = await prisma.postQueue.create({
@@ -155,14 +180,14 @@ router.post('/bulk-generate', requireAuth, async (req, res, next) => {
           content: postData.content,
           hashtags: postData.hashtags ? [postData.hashtags] : [],
           scheduledFor,
-          mediaUrl: imageData?.url,
+          mediaUrl: photo.url,
           status: 'pending'
         }
       });
       
       posts.push(post);
       
-      // Schedule next post 1 day later (or based on user's plan)
+      // Schedule next post based on frequency (daily for now)
       scheduledFor = new Date(scheduledFor.getTime() + 24 * 60 * 60 * 1000);
     }
     
