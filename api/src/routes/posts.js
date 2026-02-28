@@ -81,7 +81,7 @@ router.post('/generate', requireAuth, async (req, res, next) => {
     const connection = await prisma.connectedAccount.findFirst({
       where: {
         userId: req.user.userId,
-        status: 'active'
+        status: 'ACTIVE'
       }
     });
 
@@ -139,7 +139,7 @@ router.post('/bulk-generate', requireAuth, async (req, res, next) => {
     const connection = await prisma.connectedAccount.findFirst({
       where: {
         userId: req.user.userId,
-        status: 'active'
+        status: 'ACTIVE'
       }
     });
 
