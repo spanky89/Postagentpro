@@ -26,3 +26,7 @@ Thumbs.db
 
 # Prisma
 prisma/migrations/*.sql
+
+# Uploaded files
+/uploads/*
+!/uploads/.gitkeep

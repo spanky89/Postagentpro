@@ -85,14 +85,14 @@ export default function DashboardPage() {
 
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-lg mb-4">
-              <span className="text-2xl">🚀</span>
+              <span className="text-2xl">📸</span>
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">3. Generate posts</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">3. Upload work photos</h3>
             <p className="text-gray-600 text-sm mb-4">
-              AI will generate engaging content for your business
+              Upload photos of your projects and we'll create posts automatically
             </p>
-            <Link href="/dashboard/posts" className="text-blue-600 hover:text-blue-700 font-semibold text-sm">
-              View posts →
+            <Link href="/dashboard/upload" className="text-blue-600 hover:text-blue-700 font-semibold text-sm">
+              Upload photos →
             </Link>
           </div>
         </div>
