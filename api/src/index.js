@@ -52,15 +52,16 @@ let authRoutes, healthRoutes, businessRoutes, connectionsRoutes, postsRoutes, st
     
     console.log('Routes mounted');
     
-    // Start background job
-    if (startPublishingJob) {
-      try {
-        startPublishingJob();
-        console.log('⏰ Publishing job started');
-      } catch (error) {
-        console.error('⚠️ Failed to start publishing job:', error.message);
-      }
-    }
+    // Start background job (TEMPORARILY DISABLED FOR DEBUGGING)
+    // if (startPublishingJob) {
+    //   try {
+    //     startPublishingJob();
+    //     console.log('⏰ Publishing job started');
+    //   } catch (error) {
+    //     console.error('⚠️ Failed to start publishing job:', error.message);
+    //   }
+    // }
+    console.log('⚠️ Publishing job disabled for debugging');
   } catch (error) {
     console.error('Error loading routes:', error);
   }
